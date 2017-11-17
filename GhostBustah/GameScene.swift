@@ -14,22 +14,29 @@ class GameScene: SKScene {
         return view as! ARSKView
     }
     
+    var timer: Timer!
+    var ghostMove = false
     var sight: SKSpriteNode!
     var isWorldSetUp = false
-    
+    var firstRender = true
+    var screenHeight: CGFloat = 0.0
+    var screenWidth: CGFloat = 0.0
+//    var anchor: Anchor!
+    private var translation = matrix_identity_float4x4
     let gameSize = CGSize(width: 2,height: 2)
     
     private func setUpWorld() {
+        startGhostTimer()
         guard let currentFrame = sceneView.session.currentFrame,
             let scene = SKScene(fileNamed: "Main")
             else { return }
         for node in scene.children {
             if let node = node as? SKSpriteNode {
                 node.size = CGSize(width: 10, height: 10)
-                print(node.size)
-                var translation = matrix_identity_float4x4
-                let positionX = node.position.x / scene.size.width
-                let positionY = node.position.y / scene.size.height
+                screenWidth = scene.size.width
+                screenHeight = scene.size.height
+                let positionX = randomFloat(min: 0.0, max: 150.0) / scene.size.width
+                let positionY = randomFloat(min: 0.0, max: 150.0)  / scene.size.height
                 translation.columns.3.x = Float(positionX * gameSize.width)
                 translation.columns.3.z = -Float(positionY * gameSize.height)
                 translation.columns.3.y = Float(drand48() - 0.5)
@@ -42,7 +49,6 @@ class GameScene: SKScene {
                 }
             }
         }
-        print(scene.children)
         isWorldSetUp = true
     }
     
@@ -51,6 +57,9 @@ class GameScene: SKScene {
         if !isWorldSetUp {
             setUpWorld()
         }
+        
+        let fadeOut = SKAction.fadeOut(withDuration: 0.5)
+        let fadeIn = SKAction.fadeIn(withDuration: 0.5)
         guard let currentFrame = sceneView.session.currentFrame,
             let lightEstimate = currentFrame.lightEstimate
             else { return }
@@ -64,10 +73,25 @@ class GameScene: SKScene {
                 ghost.color = .black
                 ghost.colorBlendFactor = blendFactor
             }
+//            if ghostMove {
+//                ghostMove = false
+//                print("Moving")
+////                node.run(fadeOut)
+//                let positionX = randomFloat(min: 0.0, max: 150.0) / screenWidth
+//                let positionY = randomFloat(min: 0.0, max: 150.0)  / screenHeight
+//                translation.columns.3.x = Float(positionX * gameSize.width)
+//                translation.columns.3.z = -Float(positionY * gameSize.height)
+//                translation.columns.3.y = Float(drand48() - 0.5)
+//                let transform = currentFrame.camera.transform * translation
+//                anchor = Anchor(transform: transform)
+////                node.run(fadeIn)
+//            }
         }
     }
     
-
+    func randomFloat(min: CGFloat, max: CGFloat) -> CGFloat {
+        return (CGFloat(arc4random()) / 0xFFFFFFFF) * (max - min) + min
+    }
     
     override func didMove(to view: SKView) {
         srand48(Int(Date.timeIntervalSinceReferenceDate))
@@ -99,16 +123,32 @@ class GameScene: SKScene {
         }
     }
     
+    func startGhostTimer () {
+        timer = Timer.scheduledTimer(timeInterval: 10.0, target: self, selector: #selector(self.moveGhost), userInfo: nil, repeats: true)
+    }
     
+    @objc func moveGhost() {
+        print("Ghost Move Called")
+        ghostMove = true
+    }
     
+
+
+    private func remove(anchor: ARAnchor) {
+        sceneView.session.remove(anchor: anchor)
+    }
+    
+}
+
+
 //    func view(_ view: ARSKView,
 //              nodeFor anchor: ARAnchor) -> SKNode? {
 //        let ghost = SKSpriteNode(imageNamed: "ghost")
 //        ghost.name = "ghost"
 //        return ghost
 //    }
-    
-    
+
+
 //        for anchor in currentFrame.anchors {
 //            guard let node = sceneView.node(for: anchor),
 //                else { continue }
@@ -137,11 +177,3 @@ class GameScene: SKScene {
 //            sight.texture = SKTexture(imageNamed: sightImageName)
 //        }
 //    }
-
-//    private func remove(bugspray anchor: ARAnchor) {
-//        run(Sounds.bugspray)
-//        sceneView.session.remove(anchor: anchor)
-//        hasBugspray = true
-//    }
-    
-}
